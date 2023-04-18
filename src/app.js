@@ -1,5 +1,3 @@
-const Web3 = require("web3");
-
 App = {
     loading:false,
     contracts: {},
@@ -8,17 +6,24 @@ App = {
         await App.loadAccount()
         await App.loadContract()
         await App.render()
+        web3.eth.defaultAccount = App.account;
     },
 
     loadAccount: async () => {
         if (window.ethereum) {
-            let account = await window.ethereum.request({method: 'eth_requestAccounts'});
-            window.web3 = new Web3(window.ethereum);
-            App.account = account;
-            console.log("account connected");
-            return true;
+            console.log("Connecting to Metamask...")
+            try {
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                window.web3 = new Web3(window.ethereum);
+                App.account = accounts[0];
+                console.log("Connected to Metamask account:", App.account);
+                return true;
+            } catch (e) {
+                console.log("Error connecting to Metamask:", e);
+                return false;
+            }
         }
-        console.log("not able to connect the account");
+        console.log("Metamask not found");
         return false;
     },
 
@@ -54,7 +59,6 @@ App = {
         const todoList = await $.getJSON('ToDoList.json')
         App.contracts.ToDoList = TruffleContract(todoList)
         App.contracts.ToDoList.setProvider(web3.currentProvider)
-
         App.todoList = await App.contracts.ToDoList.deployed()
     },
 
@@ -71,6 +75,14 @@ App = {
         await App.renderTask()
 
         App.setLoading(false)
+    },
+
+    createTask: async () => {
+        console.log("create task : "+App.account)
+        App.setLoading(true)
+        const content = $('#newTask').val()
+        await App.todoList.createTask(content)
+        window.location.reload()
     },
 
     setLoading: (boolean) => {
